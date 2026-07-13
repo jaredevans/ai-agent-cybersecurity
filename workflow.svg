@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 880" width="1200" height="880" role="img" aria-label="Sequence diagram of the AI security agent's two-phase execution workflow: deterministic baseline, then an agentic guard-gated tool loop, then the report. Executed-command output is redacted for secrets before it reaches the model, and every attempted command — executed or rejected, in both phases — is appended to the audit log.">
+  <style>
+    text{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .ll{stroke:#c8d1da;stroke-width:1.4;stroke-dasharray:2 5;}
+    .call{stroke:#334155;stroke-width:1.7;}
+    .teal{stroke:#0b7285;stroke-width:1.9;}
+    .ret{stroke-dasharray:5 4;}
+    .green{stroke:#2f9e44;stroke-width:1.7;}
+    .red{stroke:#d6336c;stroke-width:1.7;}
+    .mute{stroke:#8a94a1;stroke-width:1.5;}
+    .amber{stroke:#e8590c;stroke-width:1.7;}
+    .mLbl{font-size:12.5px;fill:#0f172a;text-anchor:middle;}
+    .mCode{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;font-size:12px;fill:#0f172a;text-anchor:middle;}
+    .mRet{font-size:12px;fill:#5b6674;text-anchor:middle;}
+    .ptitle{font-size:13.5px;font-weight:650;text-anchor:middle;}
+    .psub{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;font-size:10.5px;text-anchor:middle;}
+    .frmT{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
+    .altH{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;font-size:11px;font-weight:600;}
+    .loopCap{font-size:12px;font-style:italic;fill:#0b7285;text-anchor:middle;}
+  </style>
+  <defs>
+    <marker id="aInk" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#334155"/></marker>
+    <marker id="aTeal" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#0b7285"/></marker>
+    <marker id="aGreen" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#2f9e44"/></marker>
+    <marker id="aRed" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#d6336c"/></marker>
+    <marker id="aMute" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8a94a1"/></marker>
+    <marker id="aAmber" markerWidth="9" markerHeight="9" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#e8590c"/></marker>
+  </defs>
+
+  <!-- background (keeps the diagram readable on light or dark hosts) -->
+  <rect x="0" y="0" width="1200" height="880" fill="#ffffff"/>
+
+  <!-- ===== Frames ===== -->
+  <rect x="44" y="114" width="1120" height="152" rx="10" fill="#eef2f7" stroke="#cdd8e3"/>
+  <rect x="44" y="114" width="4" height="152" fill="#8aa1b8"/>
+  <text class="frmT" x="60" y="132" fill="#5b6674">Phase 1 · deterministic baseline — no LLM · for each of ~40 checklist commands</text>
+
+  <rect x="44" y="286" width="1120" height="538" rx="10" fill="#e6f1f3" stroke="#bcdbe0"/>
+  <rect x="44" y="286" width="4" height="538" fill="#0b7285"/>
+  <text class="frmT" x="60" y="304" fill="#0b7285">Phase 2 · agentic analysis — claude_agent_sdk.query() tool loop</text>
+
+  <rect x="64" y="340" width="1080" height="414" rx="9" fill="#ffffff" stroke="#bcdbe0" stroke-dasharray="6 4"/>
+  <rect x="64" y="340" width="150" height="20" fill="#0b7285"/>
+  <text class="altH" x="74" y="354" fill="#ffffff">loop</text>
+  <text class="frmT" x="222" y="354" fill="#5b6674" style="text-transform:none;letter-spacing:0;font-weight:600;">while Claude keeps issuing ssh_run — no coded cap</text>
+
+  <rect x="82" y="420" width="1044" height="300" rx="8" fill="#f8fafb" stroke="#c8d1da" stroke-dasharray="4 4"/>
+  <rect x="82" y="420" width="126" height="19" fill="#5b6674"/>
+  <text class="altH" x="92" y="433.5" fill="#ffffff">alt</text>
+  <text class="altH" x="216" y="433.5" fill="#2f9e44">[ guard allows ]</text>
+  <line x1="82" y1="612" x2="1126" y2="612" stroke="#c8d1da" stroke-dasharray="4 4"/>
+  <text class="altH" x="96" y="629" fill="#d6336c">[ guard blocks ]</text>
+
+  <!-- ===== Lifelines ===== -->
+  <rect x="556" y="88" width="8" height="764" rx="4" fill="rgba(11,114,133,.10)"/>
+  <g class="ll">
+    <line x1="110" y1="60" x2="110" y2="856"/>
+    <line x1="320" y1="60" x2="320" y2="856"/>
+    <line x1="560" y1="60" x2="560" y2="856"/>
+    <line x1="760" y1="60" x2="760" y2="856"/>
+    <line x1="940" y1="60" x2="940" y2="856"/>
+    <line x1="1130" y1="60" x2="1130" y2="856"/>
+  </g>
+
+  <!-- ===== Participant heads ===== -->
+  <rect x="50" y="18" width="120" height="40" rx="9" fill="#fff" stroke="#c8d1da"/>
+  <text class="ptitle" x="110" y="36" fill="#0f172a">CLI</text>
+  <text class="psub" x="110" y="50" fill="#8a94a1">uv run agent</text>
+
+  <rect x="235" y="18" width="170" height="40" rx="9" fill="#e2f1f4" stroke="#0b7285"/>
+  <text class="ptitle" x="320" y="36" fill="#0b5563">Claude · LLM</text>
+  <text class="psub" x="320" y="50" fill="#0b7285">Agent SDK loop</text>
+
+  <rect x="472" y="18" width="176" height="40" rx="9" fill="#0f172a" stroke="#0f172a"/>
+  <text class="ptitle" x="560" y="36" fill="#ffffff">Orchestrator</text>
+  <text class="psub" x="560" y="50" fill="#94a3b8">main.py · query()</text>
+
+  <rect x="680" y="18" width="160" height="40" rx="9" fill="#fff" stroke="#c8d1da"/>
+  <text class="ptitle" x="760" y="36" fill="#0f172a">Guard</text>
+  <text class="psub" x="760" y="50" fill="#8a94a1">check_command()</text>
+
+  <rect x="865" y="18" width="150" height="40" rx="9" fill="#fff" stroke="#c8d1da"/>
+  <text class="ptitle" x="940" y="36" fill="#0f172a">Target host</text>
+  <text class="psub" x="940" y="50" fill="#8a94a1">over SSH</text>
+
+  <rect x="1065" y="18" width="130" height="40" rx="9" fill="#fff" stroke="#c8d1da"/>
+  <text class="ptitle" x="1130" y="36" fill="#0f172a">Outputs</text>
+  <text class="psub" x="1130" y="50" fill="#8a94a1">report · audit</text>
+
+  <!-- ===== Phase 1 messages ===== -->
+  <line class="call" x1="110" y1="88" x2="552" y2="88" marker-end="url(#aInk)"/>
+  <text class="mCode" x="331" y="81">run_agent(host)</text>
+
+  <line class="call" x1="564" y1="142" x2="756" y2="142" marker-end="url(#aInk)"/>
+  <text class="mCode" x="660" y="135">check_command()</text>
+  <line class="green ret" x1="760" y1="170" x2="566" y2="170" marker-end="url(#aGreen)"/>
+  <text class="mRet" x="663" y="163">allowed</text>
+  <line class="call" x1="564" y1="200" x2="936" y2="200" marker-end="url(#aInk)"/>
+  <text class="mLbl" x="750" y="193">ssh exec · reuses one SSH master</text>
+  <line class="mute ret" x1="940" y1="228" x2="566" y2="228" marker-end="url(#aMute)"/>
+  <text class="mRet" x="752" y="221">stdout · stderr · exit</text>
+  <line class="mute ret" x1="564" y1="254" x2="1126" y2="254" marker-end="url(#aMute)"/>
+  <text class="mRet" x="847" y="247">append audit.jsonl</text>
+
+  <line class="call" x1="556" y1="300" x2="324" y2="300" marker-end="url(#aInk)"/>
+  <text class="mLbl" x="440" y="293">initial prompt = SYSTEM_PROMPT + redacted baseline</text>
+
+  <!-- ===== Phase 2 messages ===== -->
+  <line class="teal" x1="320" y1="374" x2="552" y2="374" marker-end="url(#aTeal)"/>
+  <text class="mCode" x="436" y="367" fill="#0b7285">ssh_run(command)  ⟨tool call⟩</text>
+  <line class="call" x1="564" y1="402" x2="756" y2="402" marker-end="url(#aInk)"/>
+  <text class="mCode" x="660" y="395">check_command()</text>
+
+  <!-- [ guard allows ] -->
+  <line class="green ret" x1="760" y1="458" x2="566" y2="458" marker-end="url(#aGreen)"/>
+  <text class="mRet" x="663" y="451" fill="#2f9e44">✓ allowed → validated pipeline</text>
+  <line class="call" x1="564" y1="486" x2="936" y2="486" marker-end="url(#aInk)"/>
+  <text class="mLbl" x="750" y="479">ssh exec</text>
+  <line class="mute ret" x1="940" y1="514" x2="566" y2="514" marker-end="url(#aMute)"/>
+  <text class="mRet" x="752" y="507">stdout · stderr · exit</text>
+  <line class="mute ret" x1="564" y1="542" x2="1126" y2="542" marker-end="url(#aMute)"/>
+  <text class="mRet" x="847" y="535">append audit.jsonl · executed · exit code</text>
+  <!-- redact() self-step on the Orchestrator, before output returns to Claude -->
+  <path class="amber" fill="none" d="M564 560 h46 v20 h-46" marker-end="url(#aAmber)"/>
+  <text class="mRet" x="618" y="574" style="text-anchor:start" fill="#e8590c">redact() — mask keys · hashes · passwords · tokens · URL creds</text>
+  <line class="teal ret" x1="556" y1="596" x2="324" y2="596" marker-end="url(#aTeal)"/>
+  <text class="mRet" x="440" y="589" fill="#0b7285">tool_result: redacted command output</text>
+
+  <!-- [ guard blocks ] -->
+  <line class="red ret" x1="760" y1="654" x2="566" y2="654" marker-end="url(#aRed)"/>
+  <text class="mRet" x="663" y="647" fill="#d6336c">✗ rejected (write / not on allowlist)</text>
+  <line class="mute ret" x1="564" y1="680" x2="1126" y2="680" marker-end="url(#aMute)"/>
+  <text class="mRet" x="847" y="673">append audit.jsonl · blocked · severity (never reaches SSH)</text>
+  <line class="red ret" x1="556" y1="706" x2="324" y2="706" marker-end="url(#aRed)"/>
+  <text class="mRet" x="440" y="699" fill="#d6336c">REJECTED → Claude adapts, tries another read-only cmd</text>
+
+  <text class="loopCap" x="604" y="738">↺ Claude reads each result and picks the next command — exiting only when nothing new surfaces</text>
+
+  <line class="teal" x1="320" y1="776" x2="552" y2="776" marker-end="url(#aTeal)"/>
+  <text class="mCode" x="436" y="769" fill="#0b7285">write_report(content)  ⟨tool call · exactly once⟩</text>
+  <line class="call" x1="564" y1="804" x2="1126" y2="804" marker-end="url(#aInk)"/>
+  <text class="mCode" x="845" y="797">write reports/&lt;host&gt;-&lt;date&gt;.md</text>
+
+  <line class="mute ret" x1="556" y1="846" x2="114" y2="846" marker-end="url(#aMute)"/>
+  <text class="mRet" x="335" y="839">report path</text>
+</svg>
