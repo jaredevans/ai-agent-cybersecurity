@@ -64,7 +64,9 @@ Command tips (the guard is strict; work with it, not against it):
   `pro security-status`. For database/cache services (all restricted to a
   loopback target and read-only forms): `redis-cli -p <port> PING` and
   `redis-cli -p <port> CONFIG GET requirepass` (Redis auth state),
-  `psql -h 127.0.0.1 -U postgres -l` (PostgreSQL database list + auth probe),
+  `psql -h 127.0.0.1 -U postgres -l` (PostgreSQL database list + auth probe;
+  the guard runs psql with `-w` so it never blocks on a password prompt — a
+  "no password supplied" / permission error just means auth is enforced),
   and `mysql --version` (the MySQL client is version-only — it cannot run SQL).
 - When `ss`/`ps` shows a database or cache service listening (Redis,
   PostgreSQL, MySQL/MariaDB), don't stop at "is it listening / firewalled" —
@@ -78,8 +80,9 @@ Command tips (the guard is strict; work with it, not against it):
     (`bind-address`, `skip-grant-tables`, `skip-networking`).
   - Live-probe to confirm: Redis `redis-cli -p <port> CONFIG GET requirepass`
     (or a `PING` — a `NOAUTH` reply means auth is enforced); PostgreSQL
-    `psql -h 127.0.0.1 -U postgres -l` (a password/permission error confirms
-    auth is enforced). The MySQL client is version-only, so rely on its config.
+    `psql -h 127.0.0.1 -U postgres -l` (run with `-w`, so a password/permission
+    error returns immediately and confirms auth is enforced). The MySQL client
+    is version-only, so rely on its config.
   An unauthenticated instance reachable on a non-loopback interface is a serious
   finding — an open Redis permits `CONFIG SET`-based remote code execution — so
   record the bound interface, not just the port.

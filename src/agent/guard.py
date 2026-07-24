@@ -937,9 +937,18 @@ def _check_stage_command(seg: list[str],
     rule = TIER2_RULES.get(binary)
     if rule is not None:
         ok, reason = rule(args)
-        if ok:
-            return GuardResult(allowed=True, reason="", argv=seg, severity="")
-        return _deny_write(reason)
+        if not ok:
+            return _deny_write(reason)
+        argv = seg
+        # psql prompts interactively for a password when the server requires
+        # one and none is supplied, which blocks the non-interactive SSH exec
+        # until the timeout. Force -w (--no-password) so it fails immediately
+        # instead — a "no password supplied" error is itself the auth-enforced
+        # signal the probe is looking for.
+        if binary == "psql" and not any(
+                a in ("-w", "--no-password") for a in args):
+            argv = [binary, "-w", *args]
+        return GuardResult(allowed=True, reason="", argv=argv, severity="")
 
     return _deny_write(f"binary '{binary}' is not on the read-only allowlist")
 
@@ -972,8 +981,10 @@ def _check_stage(seg: list[str],
         verdict = _check_stage_command(inner, self_hosts)
         if not verdict.allowed:
             return verdict
-        return GuardResult(allowed=True, reason="", argv=["sudo", "-n", *inner],
-                           severity="")
+        # Wrap the VALIDATED argv (which may carry an injected flag such as
+        # psql's -w), not the raw inner tokens.
+        return GuardResult(allowed=True, reason="",
+                           argv=["sudo", "-n", *verdict.argv], severity="")
     return _check_stage_command(seg, self_hosts)
 
 

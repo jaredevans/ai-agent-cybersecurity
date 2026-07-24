@@ -271,6 +271,36 @@ def test_tier2_read_allowed(cmd):
     assert r.severity == ""
 
 
+# --- psql fails fast: -w (--no-password) is always injected ---------------
+
+def test_psql_injects_no_password_flag():
+    # Without -w, psql prompts interactively and hangs the non-interactive
+    # SSH exec until the timeout. The guard forces -w so it fails in ms.
+    r = check_command("psql -h 127.0.0.1 -U postgres -l")
+    assert r.allowed is True
+    assert r.argv == ["psql", "-w", "-h", "127.0.0.1", "-U", "postgres", "-l"]
+    assert r.pipeline == [r.argv]
+
+
+def test_psql_does_not_duplicate_existing_short_w():
+    r = check_command("psql -w -l")
+    assert r.allowed is True
+    assert r.argv == ["psql", "-w", "-l"]
+
+
+def test_psql_does_not_duplicate_existing_long_no_password():
+    r = check_command("psql --no-password -l")
+    assert r.allowed is True
+    assert r.argv == ["psql", "--no-password", "-l"]
+
+
+def test_psql_no_password_injected_under_sudo():
+    r = check_command("sudo psql -h 127.0.0.1 -U postgres -l")
+    assert r.allowed is True
+    assert r.argv == ["sudo", "-n", "psql", "-w", "-h", "127.0.0.1",
+                      "-U", "postgres", "-l"]
+
+
 # --- Tier 2 + unknown: blocked as reversible writes ----------------------
 
 @pytest.mark.parametrize("cmd", [
