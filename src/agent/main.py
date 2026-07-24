@@ -19,6 +19,7 @@ from agent.checklist import CHECKLIST
 from agent.collect import collect_baseline
 from agent.config import load_env_file
 from agent.identity import discover_self_hosts
+from agent.privilege import detect_privilege
 from agent.prompts import SYSTEM_PROMPT, build_initial_prompt
 from agent.report import audit_path, make_write_report, report_path
 from agent.ssh_tool import make_ssh_run
@@ -88,9 +89,19 @@ async def run_agent(host: str) -> Path:
     today = date.today()
     audit = make_audit_logger(audit_path(REPORTS_DIR, host, today))
 
+    # Detect whether we are root or a non-root user with passwordless sudo,
+    # so Phase 1 (and the Phase 2 prompt) can escalate reads when needed.
+    priv = detect_privilege(host)
+    if priv.is_root:
+        print("Privilege: connected as root.")
+    elif priv.use_sudo:
+        print("Privilege: non-root with passwordless sudo — using sudo for reads.")
+    else:
+        print("Privilege: non-root without passwordless sudo — reads run unprivileged.")
+
     # Phase 1: deterministic baseline collection (through the guard + audit).
     print(f"Collecting baseline from '{host}' ...")
-    baseline = collect_baseline(host, CHECKLIST, audit=audit)
+    baseline = collect_baseline(host, CHECKLIST, audit=audit, sudo=priv.use_sudo)
     ran = sum(1 for r in baseline if r.allowed)
     print(f"Baseline: {ran}/{len(baseline)} commands executed.")
 
@@ -108,7 +119,7 @@ async def run_agent(host: str) -> Path:
     options = build_options(server)
 
     async for message in query(
-        prompt=build_initial_prompt(host, baseline),
+        prompt=build_initial_prompt(host, baseline, use_sudo=priv.use_sudo),
         options=options,
     ):
         print(message)

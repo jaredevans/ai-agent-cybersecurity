@@ -26,15 +26,21 @@ class CollectionResult:
 
 def collect_baseline(host: str, checklist: dict[str, list[str]], *,
                      runner=subprocess.run, check=check_command,
-                     audit=None, timeout: int = 120) -> list["CollectionResult"]:
+                     audit=None, timeout: int = 120,
+                     sudo: bool = False) -> list["CollectionResult"]:
     """Run every checklist command (in order), returning a CollectionResult each.
 
     Rejected commands are recorded and skipped (never sent to SSH). Every
-    attempt is written to `audit` when provided.
+    attempt is written to `audit` when provided. When `sudo` is True (the
+    connecting user is non-root with passwordless sudo), each command is
+    prefixed with `sudo ` before the guard check; the guard validates the
+    inner command and rewrites it to `sudo -n ...`.
     """
     results: list[CollectionResult] = []
     for category, commands in checklist.items():
         for command in commands:
+            if sudo:
+                command = f"sudo {command}"
             verdict = check(command)
             if not verdict.allowed:
                 if audit is not None:

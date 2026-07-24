@@ -909,9 +909,9 @@ def _split_pipeline(tokens: list[str]) -> list[list[str]]:
     return stages
 
 
-def _check_stage(seg: list[str],
-                 self_hosts: frozenset = frozenset()) -> GuardResult:
-    """Validate one pipeline stage (a token list). Returns allowed argv=seg."""
+def _check_stage_command(seg: list[str],
+                         self_hosts: frozenset = frozenset()) -> GuardResult:
+    """Validate one already-unwrapped command stage (a token list)."""
     cat = _catastrophic_reason(" ".join(seg), seg)
     if cat is not None:
         return GuardResult(allowed=False, reason=f"CATASTROPHIC: {cat}",
@@ -942,6 +942,39 @@ def _check_stage(seg: list[str],
         return _deny_write(reason)
 
     return _deny_write(f"binary '{binary}' is not on the read-only allowlist")
+
+
+def _check_stage(seg: list[str],
+                 self_hosts: frozenset = frozenset()) -> GuardResult:
+    """Validate one pipeline stage, transparently unwrapping a leading `sudo`.
+
+    A `sudo`-prefixed stage is accepted only if the inner command itself
+    passes the full read-only validation. We reject every sudo flag and env
+    assignment (any token that starts with '-' or contains '='), so only the
+    bare form `sudo <command> [args...]` is allowed — sudoedit (-e), shells
+    (-i/-s), env injection (-E/VAR=val), and -u/-g/-- are all refused. On
+    success the executed argv becomes `sudo -n <inner...>`: `-n` makes a host
+    without passwordless sudo fail fast instead of hanging on a prompt.
+
+    Because the strip happens before `_check_stage_command`'s catastrophic
+    tripwire, `sudo rm -rf /` / `sudo shutdown` classify as catastrophic
+    exactly like their unwrapped forms.
+    """
+    if seg and seg[0] == "sudo":
+        inner = seg[1:]
+        if not inner:
+            return _deny_write("sudo requires a command to run")
+        first = inner[0]
+        if first.startswith("-") or "=" in first:
+            return _deny_write(
+                "sudo is permitted only as a bare wrapper "
+                "(`sudo <command>`); flags and env assignments are blocked")
+        verdict = _check_stage_command(inner, self_hosts)
+        if not verdict.allowed:
+            return verdict
+        return GuardResult(allowed=True, reason="", argv=["sudo", "-n", *inner],
+                           severity="")
+    return _check_stage_command(seg, self_hosts)
 
 
 def check_command(command: str,

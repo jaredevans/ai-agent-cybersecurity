@@ -77,6 +77,51 @@ def test_collect_audits_transport_error_with_message():
     assert "ssh exploded" in records[0]["error"]
 
 
+def test_collect_prefixes_sudo_when_enabled():
+    checklist = {"Cat A": ["cat /etc/shadow"]}
+    seen = []
+
+    def fake_runner(cmd, **kwargs):
+        seen.append(cmd)
+        return FakeCompleted(0, "root:*:...\n", "")
+
+    results = collect_baseline("ia", checklist, runner=fake_runner, sudo=True)
+
+    assert results[0].allowed is True
+    assert results[0].command == "sudo cat /etc/shadow"
+    # guard rewrote it to `sudo -n cat /etc/shadow`; run_ssh joins the argv.
+    assert seen[0][-1] == "sudo -n cat /etc/shadow"
+
+
+def test_collect_no_sudo_prefix_by_default():
+    checklist = {"Cat A": ["cat /etc/shadow"]}
+    seen = []
+
+    def fake_runner(cmd, **kwargs):
+        seen.append(cmd)
+        return FakeCompleted(0, "", "")
+
+    results = collect_baseline("ia", checklist, runner=fake_runner)
+
+    assert results[0].command == "cat /etc/shadow"
+    assert seen[0][-1] == "cat /etc/shadow"
+
+
+def test_collect_sudo_rejection_still_skipped():
+    # A write command stays blocked even with the sudo prefix.
+    checklist = {"Cat A": ["rm -rf /"]}
+    ran = []
+
+    def fake_runner(cmd, **kwargs):
+        ran.append(cmd)
+        return FakeCompleted(0, "", "")
+
+    results = collect_baseline("ia", checklist, runner=fake_runner, sudo=True)
+
+    assert results[0].allowed is False
+    assert len(ran) == 0
+
+
 def test_collect_passes_parsed_argv_to_ssh():
     checklist = {"Cat A": ["grep -n root /etc/passwd"]}
     seen = []

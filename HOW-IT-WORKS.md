@@ -17,6 +17,8 @@ Running `uv run agent <host>` (`agent.main.run_agent`) executes the assessment i
 
 ### Phase 1 — Deterministic baseline (no LLM)
 
+Before collection, `detect_privilege()` (`agent/privilege.py`) probes the connecting user with two fixed read-only commands — `id -u`, then (if not root) `sudo -n id -u`. If the user is non-root but passwordless sudo escalates to root, every baseline command is prefixed with `sudo` (which the guard rewrites to `sudo -n …`); as root, commands run bare. On a host with `Defaults requiretty` the `sudo -n` probe fails without a TTY, so the agent falls back to unprivileged reads.
+
 `collect_baseline()` (`agent/collect.py`) runs a fixed checklist (`agent/checklist.py` — ~40 commands across the four assessment categories) in order. Each command passes through the same read-only guard and, if allowed, is run over SSH with its output captured. Because this phase is hardcoded and LLM-free, it **guarantees a consistent floor of coverage on every run** and is fully unit-testable. Its results are formatted into the first user message for Phase 2.
 
 ### Phase 2 — Agentic analysis (Claude Agent SDK)
@@ -45,7 +47,9 @@ Every command in both phases, executed or rejected, is appended to `reports/<hos
 
 The agent employs a rigorous **read-only, pure-function guard** (implemented in `src/agent/guard.py`) to validate commands before they are sent over SSH. The guard evaluates pipeline stages individually and categorizes every proposed command into one of three distinct severity outcomes: **Allowed**, **Catastrophic (Blocked)**, or **Write (Blocked)**.
 
-The primary control mechanism is **deny-by-default**. Commands are only executed if they belong to a curated allowlist. Furthermore, shell metacharacters (like `>`, `<`, `;`, `&`, `$`, `` ` ``) and privilege escalation prefixes are globally blocked. Pipes (`|`) are permitted, but the pipeline is segmented, and every individual stage must independently pass the guard checks.
+The primary control mechanism is **deny-by-default**. Commands are only executed if they belong to a curated allowlist. Furthermore, shell metacharacters (like `>`, `<`, `;`, `&`, `$`, `` ` ``) are globally blocked. Pipes (`|`) are permitted, but the pipeline is segmented, and every individual stage must independently pass the guard checks.
+
+**`sudo` as a transparent wrapper.** `sudo <command>` is accepted only when `<command>` itself passes the read-only guard. The guard strips the leading `sudo`, validates the inner command through the *identical* Tier 1 / Tier 2 / catastrophic logic, and — on success — executes it as `sudo -n <command>` (the `-n` is injected so a host without passwordless sudo fails fast instead of hanging on a password prompt). Because the strip happens *before* the catastrophic tripwire, `sudo rm -rf /` and `sudo shutdown` still classify as catastrophic exactly like their unwrapped forms. Only the bare wrapper is allowed: sudo flags and env assignments (`-e`/sudoedit, `-i`/`-s` shells, `-E`, `-u`, `--`, `VAR=val`) and nested `sudo sudo …` are rejected. The other privilege-escalation prefixes — `su`, `doas`, `runuser`, `pkexec` — remain unconditionally blocked.
 
 ### 1. Catastrophic (Blocked)
 These commands are checked **first**, acting as a strict tripwire. These are operations that can cause irreversible damage to the target system (e.g., wiping disks, destroying partitions, removing logical volumes, or recursive deletions on system paths). 
@@ -81,7 +85,7 @@ This category captures everything that is not explicitly allowed in Tier 1 or Ti
 
 **Examples of General Blocked Commands:**
 *   Any binary not explicitly listed in Tier 1 or Tier 2.
-*   Commands that use privilege escalation prefixes: `sudo`, `su`, `doas`, `runuser`, `pkexec`.
+*   Commands that use the blocked privilege escalation prefixes `su`, `doas`, `runuser`, `pkexec` (and `sudo` in any non-bare form — with flags, an env assignment, or nested; the bare `sudo <read-only-command>` wrapper is allowed, see above).
 *   Commands violating global syntax rules (e.g., containing forbidden shell metacharacters like `<`, `;`, `&`, `$`, `\n`).
 *   Tier 2 binaries invoked with write, execute, or control subcommands (e.g., `docker run`, `iptables -A`, `systemctl restart`, `curl -o`).
 *   Binaries invoked as absolute/relative paths instead of bare command names.

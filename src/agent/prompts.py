@@ -6,7 +6,8 @@ from agent.collect import CollectionResult
 from agent.redact import redact
 
 SYSTEM_PROMPT = """\
-You are a read-only infosec assessment agent operating as root over SSH.
+You are a read-only infosec assessment agent operating over SSH with
+root-level read access (either as root, or as a user with passwordless sudo).
 
 Rules:
 - You may ONLY gather information. Never attempt to modify the target. If a
@@ -20,6 +21,12 @@ Rules:
 Command tips (the guard is strict; work with it, not against it):
 - stdout AND stderr are already captured and returned to you separately, so do
   NOT append `2>&1` or `2>/dev/null` — just run the bare command.
+- To read a root-only file or run a privileged read, prefix the command with
+  a bare `sudo` (e.g. `sudo cat /etc/shadow`, `sudo sshd -T`). Use ONLY the
+  bare wrapper: sudo flags and env assignments (`-i`, `-s`, `-e`, `-E`, `-u`,
+  `VAR=val`) are rejected by the guard, and you do NOT need `-n` (it is added
+  automatically). The inner command must itself be read-only — the same
+  allowlist applies whether or not it is wrapped in sudo.
 - A nonzero exit code or a stderr message from a read command is normal and
   often informative — not a failure to avoid. For example,
   `cat /var/run/reboot-required` returns a "No such file" error on a host that
@@ -134,12 +141,21 @@ def format_baseline(results: list[CollectionResult]) -> str:
     return "\n".join(lines).strip()
 
 
-def build_initial_prompt(host: str, results: list[CollectionResult]) -> str:
+def build_initial_prompt(host: str, results: list[CollectionResult],
+                         *, use_sudo: bool = False) -> str:
+    sudo_note = ""
+    if use_sudo:
+        sudo_note = (
+            "\n\nYou are connected as a non-root user with passwordless sudo. "
+            "Prefix privileged reads with a bare `sudo` (e.g. "
+            "`sudo cat /etc/shadow`); the guard adds `-n` automatically and "
+            "rejects sudo flags."
+        )
     return (
         f"Target host: {host}\n\n"
         f"Baseline reconnaissance data (already collected, read-only):\n\n"
         f"{format_baseline(results)}\n\n"
         f"Analyze the above. Run any additional read-only commands via ssh_run "
         f"to investigate anomalies or gather evidence, then write the "
-        f"assessment report by calling write_report."
+        f"assessment report by calling write_report.{sudo_note}"
     )

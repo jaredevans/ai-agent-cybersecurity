@@ -21,9 +21,65 @@ def test_newline_rejected():
     assert check_command("cat /etc/os-release\nls").allowed is False
 
 
-def test_sudo_su_rejected():
-    assert check_command("sudo cat /etc/os-release").allowed is False
+def test_su_and_bare_privilege_prefixes_rejected():
     assert check_command("su root").allowed is False
+    assert check_command("doas cat /etc/os-release").allowed is False
+    # sudo is now an allowed wrapper for read-only commands (see sudo tests).
+    assert check_command("sudo cat /etc/os-release").allowed is True
+
+
+# --- sudo wrapper ---------------------------------------------------------
+
+def test_sudo_wraps_readonly_command():
+    r = check_command("sudo cat /etc/shadow")
+    assert r.allowed is True
+    assert r.argv == ["sudo", "-n", "cat", "/etc/shadow"]
+    assert r.pipeline == [["sudo", "-n", "cat", "/etc/shadow"]]
+
+
+def test_sudo_preserves_tier2_rules():
+    assert check_command("sudo systemctl status ssh").allowed is True
+    assert check_command("sudo systemctl restart ssh").allowed is False
+    assert check_command("sudo find / -name x -exec rm {} +").allowed is False
+
+
+@pytest.mark.parametrize("cmd", [
+    "sudo rm -rf /",
+    "sudo shutdown -h now",
+    "sudo mkfs.ext4 /dev/sda1",
+])
+def test_sudo_catastrophic_still_catastrophic(cmd):
+    r = check_command(cmd)
+    assert r.allowed is False
+    assert r.severity == "catastrophic"
+
+
+@pytest.mark.parametrize("cmd", [
+    "sudo",                       # no command
+    "sudo -e /etc/passwd",        # sudoedit writes files
+    "sudo -i",                    # login shell
+    "sudo -s",                    # shell
+    "sudo -u root cat /etc/x",    # target-user flag
+    "sudo -E cat /etc/x",         # env preserve
+    "sudo VAR=1 cat /etc/x",      # env assignment
+    "sudo -- cat /etc/x",         # end-of-options
+    "sudo sudo cat /etc/x",       # nested
+    "sudo su -",                  # blocked inner privilege prefix
+    "sudo awk '{print}' /etc/x",  # inner not on allowlist
+])
+def test_sudo_rejected_forms(cmd):
+    assert check_command(cmd).allowed is False
+
+
+def test_sudo_in_pipeline_stages():
+    r = check_command("sudo cat /etc/shadow | grep -v x")
+    assert r.allowed is True
+    assert r.pipeline == [["sudo", "-n", "cat", "/etc/shadow"],
+                          ["grep", "-v", "x"]]
+    r2 = check_command("cat /etc/passwd | sudo grep root")
+    assert r2.allowed is True
+    assert r2.pipeline == [["cat", "/etc/passwd"],
+                           ["sudo", "-n", "grep", "root"]]
 
 
 def test_path_as_binary_rejected():

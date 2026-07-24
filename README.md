@@ -79,8 +79,10 @@ regardless of how the model behaves. Every command passes through
   - `psql` — `--version` and `-l`/`--list` (database listing + auth probe).
   - `mysql` — `--version` only (running SQL is a file-write/RCE surface).
 - **Blocked — reversible write.** Anything else (deny-by-default), including
-  shell metacharacters, path-as-binary, and `sudo`/`su`. Recorded with severity
-  `write`.
+  shell metacharacters, path-as-binary, and `su`/`doas`/`runuser`/`pkexec`.
+  `sudo` is allowed **only** as a bare wrapper around a read-only command
+  (`sudo cat /etc/shadow`, run as `sudo -n …`); sudo flags, env assignments,
+  and nested `sudo` are blocked. Recorded with severity `write`.
 
 Importantly, the agent is **not** told the exact list of allowed commands in advance. This is an intentional design choice: by letting the agent determine the best commands to run for its investigation, it will occasionally attempt to run safe commands that are not yet on the allowlist. These rejected commands act as a natural pressure test and are explicitly documented by the agent in its final report (the "Agent Feedback" loop), allowing developers to continuously discover and add useful read-only tools to the allowlist over time.
 

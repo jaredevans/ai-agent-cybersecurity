@@ -33,3 +33,17 @@ def test_system_prompt_defines_findings_and_severity():
     assert "write_report" in SYSTEM_PROMPT
     for sev in ["Critical", "High", "Medium", "Low", "Info"]:
         assert sev in SYSTEM_PROMPT
+
+
+def test_build_initial_prompt_adds_sudo_guidance_when_enabled():
+    prompt = build_initial_prompt("ia", _sample(), use_sudo=True)
+    assert "sudo" in prompt.lower()
+
+
+def test_build_initial_prompt_no_sudo_guidance_by_default():
+    prompt = build_initial_prompt("ia", _sample())
+    assert "passwordless sudo" not in prompt.lower()
+
+
+def test_system_prompt_mentions_sudo_reads():
+    assert "sudo" in SYSTEM_PROMPT.lower()
